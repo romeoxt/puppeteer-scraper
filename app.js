@@ -17,8 +17,14 @@ let browser;
       '--disable-gpu',
       '--no-zygote',
       '--single-process',
+      '--no-first-run',
+      '--disable-features=site-per-process',
+      '--no-default-browser-check',
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
     ],
-    protocolTimeout: 180000,
+    protocolTimeout: 180000, // ⬅ Increase this
   });
 })();
 
