@@ -18,18 +18,25 @@ let browser;
       '--no-zygote',
       '--single-process',
     ],
-    protocolTimeout: 120000,
+    protocolTimeout: 180000,
   });
 })();
 
 app.post('/scrape', async (req, res) => {
-  const { url } = req.body;
+  const { url, timeout = 60000 } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/119.0.0.0 Safari/537.36');
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 120000 });
+
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/119.0.0.0 Safari/537.36'
+    );
+
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: parseInt(timeout),
+    });
 
     const html = await page.content();
     const title = await page.title();
@@ -50,7 +57,6 @@ app.listen(PORT, () => console.log(`Scraper running on port ${PORT}`));
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('Shutting down...');
   if (browser) await browser.close();
   process.exit(0);
 });
