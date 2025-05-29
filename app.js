@@ -4,8 +4,7 @@ const puppeteer = require('puppeteer');
 const app = express();
 app.use(express.json());
 
-let browser;
-
+let browser; // Global browser instance
 (async () => {
   browser = await puppeteer.launch({
     headless: 'new',
@@ -24,45 +23,35 @@ let browser;
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
     ],
-    protocolTimeout: 180000, // ⬅ Increase this
+    protocolTimeout: 180000, // Long timeout
   });
 })();
 
 app.post('/scrape', async (req, res) => {
-  const { url, timeout = 60000 } = req.body;
+  const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
+  if (!browser) return res.status(503).json({ error: 'Browser not ready' });
+
+  let page = null;
   try {
-    const page = await browser.newPage();
-
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/119.0.0.0 Safari/537.36'
-    );
-
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: parseInt(timeout),
-    });
+    page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 120000 });
 
     const html = await page.content();
     const title = await page.title();
 
-    await page.close();
     res.json({ url, title, html });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  } finally {
+    if (page) await page.close();
   }
 });
 
 app.get('/health', (req, res) => {
-  res.send('Scraper is running');
+  res.send('✅ Scraper is running');
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Scraper running on port ${PORT}`));
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  if (browser) await browser.close();
-  process.exit(0);
-});
