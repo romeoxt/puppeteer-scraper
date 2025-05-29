@@ -1,6 +1,5 @@
 const express = require('express');
-const chrome = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 const app = express();
 app.use(express.json());
@@ -13,9 +12,8 @@ app.post('/scrape', async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
-      args: chrome.args,
-      executablePath: await chrome.executablePath,
-      headless: chrome.headless,
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
@@ -30,6 +28,10 @@ app.post('/scrape', async (req, res) => {
   } finally {
     if (browser !== null) await browser.close();
   }
+});
+
+app.get('/health', (req, res) => {
+  res.send('✅ Scraper is running');
 });
 
 const PORT = process.env.PORT || 3000;
