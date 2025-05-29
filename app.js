@@ -1,5 +1,5 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
 
 const app = express();
 app.use(express.json());
@@ -8,10 +8,14 @@ app.post('/scrape', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).send({ error: 'URL is required' });
 
+  let browser = null;
+
   try {
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    browser = await chromium.puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
@@ -24,9 +28,10 @@ app.post('/scrape', async (req, res) => {
 
     res.json({ url, title, html });
   } catch (err) {
+    if (browser) await browser.close();
     res.status(500).json({ error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Scraper running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
